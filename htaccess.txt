@@ -1,0 +1,17 @@
+#--------------------------------------------------
+# Répertoire : www
+#--------------------------------------------------
+
+# Le serveur doit suivre les liens symboliques :
+Options +FollowSymlinks
+AddDefaultCharset UTF-8
+
+# Activation du module de réécriture d'URL :
+<IfModule mod_rewrite.c>
+RewriteEngine on
+</IfModule>
+#--------------------------------------------------
+# Règles de réécriture d'URL :
+#--------------------------------------------------
+RewriteCond %{REQUEST_FILENAME} !-f
+ReWriteRule ^(.*)$ public/$1 [L]
