@@ -2,9 +2,7 @@
 
 namespace App;
 
-use PDO;
-
-Class Pagination {
+Class Pagination{
 
 	private $cnx;
 	private $statement;
@@ -15,14 +13,15 @@ Class Pagination {
 	private $flash;
 
 	public function __construct(
+		$cnx,
 		mixed $router,
 		string $statement, 
 		?int $attr = null,
-		int $perpage = 10,
+		?int $perpage = 10,
 		mixed $flash = null
 	)
 	{
-		$this->cnx 			= new Database;
+		$this->cnx 			= $cnx;
 		$this->statement 	= $statement;
 		$this->attr 		= $attr;
 		$this->perpage 		= $perpage;
@@ -126,37 +125,13 @@ Class Pagination {
 
 	
 	/**
-	 * CountIdForpagination compte le nombre d'enregistrement en base de donnée
-	 *
-	 * @param  mixed $statement
-	 * @param  mixed $attr
-	 * @return int
-	 */
-	public function CountIdForpagination()
-	{
-		if(!is_null($this->attr)){
-			if(is_null($this->count)){
-				$smtp = $this->cnx->thisPdo()->prepare($this->statement);
-				$smtp->execute([intval($this->attr)]);
-				$this->count = (int) $smtp->fetch(PDO::FETCH_NUM)[0];
-			}
-			return $this->count;
-		}else{
-			if(is_null($this->count)){
-				$this->count = (int) $this->cnx->thisPdo()->query($this->statement)->fetch(PDO::FETCH_NUM)[0];
-			}
-			return $this->count;
-		}
-	}
-	
-	/**
 	 * isPage retourn la page en get démarre de zero
 	 *
 	 * @return int
 	 */
 	public function PageTotal()
 	{
-		return ceil($this->CountIdForpagination()/$this->perpage);
+		return ceil($this->cnx->CountIdForpagination($this->statement,$this->attr,$this->count)/$this->perpage);
 	}
 
 	/**
