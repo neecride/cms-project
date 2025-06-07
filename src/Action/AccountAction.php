@@ -2,28 +2,21 @@
 
 namespace Action;
 
-use App\App;
-use App\Database;
-use App\Session;
-use App\Validator;
-use Framework\Router;
-
 Class AccountAction{
 
-	public  $errors;
-	private $app;
-	private $cnx;
-	private $validator;
-	private $router;
-	private $session;
+	private mixed $app;
+	private mixed $cnx;
+	private mixed $validator;
+	private mixed $router;
+	private mixed $session;
 
-	public function __construct()
+	public function __construct(mixed $cnx,mixed $app,mixed $router,mixed $session,mixed $validator)
 	{
-		$this->app 			= new App;
-		$this->cnx 			= new Database;
-		$this->router 		= new Router;
-		$this->session 		= new Session;
-		$this->validator 	= new Validator;
+		$this->cnx 			= $cnx;
+		$this->app 			= $app;
+		$this->router 		= $router;
+		$this->session 		= $session;
+		$this->validator 	= $validator;
  	}
 
 	/**
@@ -37,19 +30,6 @@ Class AccountAction{
 			return $this->cnx->Request('SELECT * FROM users WHERE id = ?',[intval($_SESSION['auth']->id)],1);
 		}
 		return false;
-	}
-	
-	/**
-	 * checkError affiche les erreurs dans la vue
-	 *
-	 * @return void
-	 */
-	public function checkError()
-	{
-		if(!is_null($this->errors))
-		{
-			return "<div class=\"notify notify-rouge\"><div class=\"notify-box-content\"><li class=\"errmode\">". implode("</li><li class=\"errmode\">",$this->errors) ."</li></div></div>";
-		}
 	}
 	
 	/**
@@ -78,7 +58,7 @@ Class AccountAction{
 				$this->app->setFlash('Votre mots de pass a bien étais modifier');
 				$this->app->redirect($this->router->routeGenerate('account'));
 			}
-			$this->errors = $this->validator->getErrors();
+			$this->validator->checkError();
 
 		}
 		return $this;
@@ -111,7 +91,7 @@ Class AccountAction{
 				$this->app->setFlash('Votre email a bien étais modifier');
 				$this->app->redirect($this->router->routeGenerate('account'));
 			}
-			$this->errors = $this->validator->getErrors();
+			$this->validator->getErrors();
 		}
 		return $this;
 	}
@@ -138,7 +118,7 @@ Class AccountAction{
 				$this->app->setFlash('L\'avatar a bien été supprimer');
 				$this->app->redirect($this->router->routeGenerate('account'));
 			}
-			$this->errors = $this->validator->getErrors();
+			$this->validator->getErrors();
 		}
 		return $this;
 	}
@@ -196,7 +176,7 @@ Class AccountAction{
 				$this->app->setFlash('Votre avatar a bien été ajouté');
 				$this->app->redirect($this->router->routeGenerate('account'));
 			}
-			$this->errors = $this->validator->getErrors();
+			$this->validator->getErrors();
 		}
 		return $this;
 	}	
@@ -222,7 +202,7 @@ Class AccountAction{
 				$this->app->setFlash('Votre profil a bien été modifier');
 				$this->app->redirect($this->router->routeGenerate('account'));
 			}
-			$this->errors = $this->validator->getErrors();
+			$this->validator->getErrors();
 		}
 		return $this;
 	}
