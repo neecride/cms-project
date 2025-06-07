@@ -11,34 +11,34 @@ class RegisterController extends Renderer
 
     public function register()
     {
-        $app = new App;
-        $app->isLogged();
-        $register = (new RegisterAction)->register();
-        $this->render('register', compact('register'));
+        $errMode = $this->thisValidator();
+        $this->thisApp()->isLogged();
+        (new RegisterAction($this->thisPDO(),$this->thisApp(),$this->thisRoute(),$this->thisSession(),$errMode))->register();
+        $this->render('register', compact('errMode'));
     }
 
     public function remember()
     {
-        $app = new App;
-        $app->isLogged();
-        (new RegisterAction())->remember();
-        $this->render('remember');
+        $errMode = $this->thisValidator();
+        $this->thisApp()->isLogged();
+        (new RegisterAction( $this->thisPDO(),$this->thisApp(),$this->thisRoute(),$this->thisSession()))->remember();
+        $this->render('remember', compact('errMode'));
     }
 
     public function reset()
     {
-        $app = new App;
-        $app->isLogged();
-        $reset = (new RegisterAction())->resetAccount();
-        $this->render('reset', compact('reset'));
+        $errMode = $this->thisValidator();
+        $this->thisApp()->isLogged();
+        (new RegisterAction($this->thisPDO(),$this->thisApp(),$this->thisRoute(),$this->thisSession(),$errMode))->resetAccount();
+        $this->render('reset', compact('errMode'));
     }
 
     public function confirm()
     {
-        $app = new App;
-        $app->isLogged();
-        (new RegisterAction)->confirAccount();
-        $this->render('confirm');
+        $errMode = $this->thisValidator();
+        $this->thisApp()->isLogged();
+        (new RegisterAction($this->thisPDO(),$this->thisApp(),$this->thisRoute(),$this->thisSession()))->confirAccount();
+        $this->render('confirm',compact('errMode'));
     }
 
 
