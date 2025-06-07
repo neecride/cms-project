@@ -2,9 +2,6 @@
 
 namespace Action;
 
-use App;
-use Framework;
-
 Class LoginAction{
 
 	public  $errors;
@@ -13,26 +10,13 @@ Class LoginAction{
 	private $router;
 	private $session;
 
-	public function __construct()
+	public function __construct(mixed $cnx, mixed $app, mixed $router, mixed $session)
 	{
-		$this->app 			= new App\App;
-		$this->cnx 			= new App\Database;
-		$this->router 		= new Framework\Router;
-		$this->session 		= new App\Session;
+        $this->cnx 			= $cnx;
+		$this->app 			= $app;
+		$this->router 		= $router;
+		$this->session 		= $session;
  	}
-	
-	/**
-	 * checkError affiche les erreurs dans la vue
-	 *
-	 * @return void
-	 */
-	public function checkError()
-	{
-		if(!is_null($this->errors))
-		{
-			return "<div class=\"notify notify-rouge\"><div class=\"notify-box-content\"><li class=\"errmode\">". implode("</li><li class=\"errmode\">",$this->errors) ."</li></div></div>";
-		}
-	}
 
     /**
      * login permet de connecter un utilisateur avec script force brute en cas d'erreur de login
