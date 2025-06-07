@@ -2,74 +2,76 @@
 
 namespace Controllers;
 
+use App\Renderer;
+use App\Pagination;
 use Action\ForumAction;
 use Action\TopicAction;
-use App\Pagination;
-use App\Renderer;
+use Action\AccountAction;
 
 class ForumController extends Renderer
 {
 
     public function home()
     {
-        $home = new ForumAction();
+        $home = new ForumAction($this->thisPDO(),$this->thisApp(),$this->thisRoute());
         $this->render('home', compact('home'));
     }
 
     public function forum()
     {
-        $perpage = $this->Params()->GetParam(2);
         $pagination = new Pagination(
-            $this->ThisRoute(),
+            $this->thisPDO(),
+            $this->thisRoute(),
             'SELECT COUNT(id) FROM f_topics',
             null,
-            $perpage,
-            $this->app()
+            $this->thisParams()->GetParam(2),
+            $this->thisApp()
         );
-        $forum      = new ForumAction($pagination->setOffset());
+        $forum = new ForumAction($this->thisPDO(),$this->thisApp(),$this->thisRoute(), $pagination->setOffset());
         $pagination->isExistPage();
 
-        $this->render('forum',compact('forum', 'pagination'));
+        $this->render('forum',compact('forum','pagination'));
     }
 
     public function viewtopic(int $id)
     {
-        $perpage = $this->Params()->GetParam(2);
+        $errMode = $this->thisValidator();
         $pagination = new Pagination(
-            $this->ThisRoute(),
+            $this->thisPDO(),
+            $this->thisRoute(),
             'SELECT COUNT(id) FROM f_topics_reponse WHERE f_topic_id = ?',
             $id,
-            $perpage,
-            $this->app()
+            $this->thisParams()->GetParam(2),
+            $this->thisApp()
         );
-        $forum      = new ForumAction;
+        $forum      = new ForumAction($this->thisPDO(),$this->thisApp(),$this->thisRoute());
+        $Response   = (new TopicAction($this->thisPDO(),$this->thisApp(),$this->thisRoute(),$this->thisSession(),$errMode,$pagination->setOffset()))
+                ->postResponses($pagination->PageTotal())
+                ->viewNotView()
+                ->resolved()
+                ->sticky()
+                ->nbView()
+                ->getTopicExist();
         $pagination->isExistPage();
-        $Response   = (new TopicAction($pagination->setOffset()))
-                    ->postResponses($pagination->PageTotal())
-                    ->viewNotView()
-                    ->resolved()
-                    ->sticky()
-                    ->nbView()
-                    ->getTopicExist();
-
-        $this->render('viewtopic',compact('forum','Response','pagination'));
+        
+        $this->render('viewtopic',compact('forum','Response','pagination','errMode'));
     }
 
     public function viewforum(int $id)
     {
-        $perpage = $this->Params()->GetParam(2);
         $pagination = new Pagination(
-            $this->ThisRoute(),
+            $this->thisPDO(),
+            $this->thisRoute(),
             'SELECT COUNT(f_tags.id) 
                 FROM f_topics LEFT JOIN f_topic_tags 
                 ON f_topics.id = f_topic_tags.topic_id 
                 LEFT JOIN f_tags ON f_topic_tags.tag_id = f_tags.id
                 WHERE f_tags.id = ?',
             $id,
-            $perpage,
-            $this->app()
+            $this->thisParams()->GetParam(2),
+            $this->thisApp()
         );
-        $viewforum  = new ForumAction($pagination->setOffset());
+        $viewforum  = new ForumAction($this->thisPDO(),$this->thisApp(),$this->thisRoute(),$pagination->setOffset());
         $pagination->isExistPage();
         $viewforum->getViewForumExist();
         $this->render('viewforums', compact('viewforum', 'pagination'));
@@ -77,25 +79,29 @@ class ForumController extends Renderer
 
     public function creatTopic()
     {
-        $this->app()->isNotConnect();
-        $forum = new ForumAction;
-        $topic = (new TopicAction())->creatTopic();
-        $this->render('creattopic',compact('topic','forum'));
+        $this->thisApp()->isNotConnect();
+        $errMode = $this->thisValidator();
+        $forum = new ForumAction($this->thisPDO(),$this->thisApp(),$this->thisRoute());
+        $topic = (new TopicAction($this->thisPDO(),$this->thisApp(),$this->thisRoute(),$this->thisSession(),$errMode))->creatTopic();
+        $this->render('creattopic',compact('topic','forum','errMode'));
     }
 
     public function editTopic()
     {
-        $this->app()->isNotConnect();
-        $forum = new ForumAction;
-        $topic = (new TopicAction())->editTopic();
-        $this->render('edittopic',compact('topic','forum'));
+        $this->thisApp()->isNotConnect();
+        $errMode = $this->thisValidator();
+        $forum = new ForumAction($this->thisPDO(),$this->thisApp(),$this->thisRoute());
+        $topic = (new TopicAction($this->thisPDO(),$this->thisApp(),$this->thisRoute(),$this->thisSession(),$errMode, null))->editTopic();
+        $this->render('edittopic',compact('topic','forum','errMode'));
     }
 
     public function editRep()
     {
-        $this->app()->isNotConnect();
-        $response = (new TopicAction())->editResponse();
-        $this->render('editrep', compact('response'));
+        $session = $this->thisSession();
+        $this->thisApp()->isNotConnect();
+        $errMode = $this->thisValidator();
+        $response = (new TopicAction($this->thisPDO(),$this->thisApp(),$this->thisRoute(),$this->thisSession(),$errMode))->editResponse();
+        $this->render('editrep', compact('response','errMode'));
     }
 
 }
