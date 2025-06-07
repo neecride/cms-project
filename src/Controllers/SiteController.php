@@ -3,6 +3,7 @@
 namespace Controllers;
 
 use Action\LoginAction;
+use Action\AccountAction;
 use App\Renderer;
 
 class SiteController extends Renderer
@@ -15,14 +16,13 @@ class SiteController extends Renderer
 
     public function logout()
     {
-        $app = $this->app();
-        $this->render('logout',compact('app'));
+        $this->render('logout');
     }
 
     public function login()
     {
-        $this->app()->isLogged();
-        (new LoginAction())->login();
+        $this->thisApp()->isLogged();
+        (new LoginAction($this->thisPDO(),$this->thisApp(),$this->thisRoute(),$this->thisSession()))->login();
         $this->render('login');
     }
 
