@@ -4,56 +4,54 @@ namespace App;
 
 use Framework\Router;
 use Action\AccountAction;
+use App\Database;
+use App\Validator;
 
 class Renderer {
 
-    private App $app;
-    private Router $router;
-    private $match;
-    private Parsing $parsing;
-    private Parameters $params;
-    private Session $session;
-    private AccountAction $user;
-
     public function __construct()
     {
-        $this->app = new App();
-        $this->router = new Router();
-        $this->match = $this->router->matchRoute();
-        $this->parsing = new Parsing();
-        $this->params = new Parameters();
-        $this->session = new Session();
-        $this->user = new AccountAction();
+
     }
 
-    /**
-     * app 
-     *
-     * @return mixed
-     */
-    public function app()
+	public function thisPDO()
+	{
+		return new Database;
+	}
+
+    public function thisPasing()
     {
-        return $this->app;
+        return new Parsing;
     }
 
-    /**
-     * PerPage
-     *
-     * @return mixed
-     */
-    public function Params()
+    public function thisSession()
+	{
+		return new Session;
+	}
+
+    public function thisValidator()
+	{
+		return new Validator;
+	}
+
+    public function thisApp()
     {
-        return $this->params;
+        return new App;
     }
 
-    /**
-     * ThisRoute retourn une instance de routeur
-     *
-     * @return string
-     */
-    public function ThisRoute()
+    public function thisParams()
     {
-        return $this->router;
+        return new Parameters;
+    }
+
+    public function thisRoute()
+    {
+        return new Router;
+    }
+    
+    public function thisUser()
+    {
+        return new AccountAction($this->thisPDO(),$this->thisApp(),$this->thisRoute(),$this->thisSession(),$this->thisValidator());
     }
 
     public function isNotExistPage()
@@ -76,7 +74,7 @@ class Renderer {
     private function getViewPath(string $type, string $fichier): string {
         $base = RACINE . DS . 'public';
         $folder = ($type === 'admin') ? 'admin' : 'templates';
-        $theme = $this->Params()->themeForLayout();
+        $theme = $this->thisParams()->themeForLayout();
         $path = $base . DS . $folder . DS . $theme . DS . 'parts' . DS . $fichier . '.php';
     
         if (!file_exists($path)) {
@@ -86,7 +84,6 @@ class Renderer {
         return $path;
     }
 
-
     /**
      * render rend les vues utilisateurs
      *
@@ -95,16 +92,13 @@ class Renderer {
      * @return void
      */
     public function render(string $fichier, array $data = []) {
-        $app = $this->app();
-        $params = $this->Params();
-
-        $app              = $this->app;
-        $router           = $this->router;
-        $match            = $this->match;
-        $Parsing          = $this->parsing;
-        $GetParams        = $this->params;
-        $session          = $this->session;
-        $user             = $this->user;
+        // global au site
+        $user             = $this->thisUser();
+        $session          = $this->thisSession();
+        $app              = $this->thisApp();
+        $router           = $this->thisRoute();
+        $Parsing          = $this->thisPasing();
+        $GetParams        = $this->thisParams();
     
         // Vérifie si le fichier de vue existe
         try {
@@ -124,15 +118,16 @@ class Renderer {
         $contentForLayout = ob_get_clean();
     
         // Chargement du layout principal
-        require_once RACINE . DS . 'public' . DS . 'templates' . DS . $params->themeForLayout() . DS . 'theme.php';
+        require_once RACINE . DS . 'public' . DS . 'templates' . DS . $GetParams->themeForLayout() . DS . 'theme.php';
     }
-  /**
-   * render rend les vues utilisateurs
-   *
-   * @param  mixed $fichier
-   * @param  mixed $data
-   * @return void
-   */
+
+    /**
+     * render rend les vues utilisateurs
+     *
+     * @param  mixed $fichier
+     * @param  mixed $data
+     * @return void
+     */
     /*public function render(string $fichier,array $data = [])
     {
         //bug avec les références a testé
@@ -143,13 +138,7 @@ class Renderer {
         $Parsing          = new Parsing;
         $GetParams        = $this->Params();
         $session          = new Session;
-        $user             = new AccountAction;
 
-        // on extrait les données des contoller
-        $data = array_combine(
-            array_map(fn($k) => "__" . $k, array_keys($data)),
-            $data
-        );
         extract($data);
 
         ob_start();
@@ -168,18 +157,17 @@ class Renderer {
     public function renderAdmin(string $fichier,array $data = [])
     {
 
-        $app              = $this->app();
-        $router           = new Router;
-        $match            = $router->matchRoute();
-        $Parsing          = new Parsing;
-        $GetParams        = $this->Params();
-        $session          = new Session;
+        $app              = $this->thisApp();
+        $router           = $this->thisRoute();
+        $Parsing          = $this->thisPasing();
+        $GetParams        = $this->thisParams();
+        $session          = $this->thisSession();
 
         extract($data);
 
         $getUri = explode('/', $_SERVER['REQUEST_URI']);
         if($getUri[1] == 'admin'){
-        $app->isAdmin();
+            $app->isAdmin();
         }
         ob_start();
         require_once (RACINE.DS.'public'.DS.'admin'.DS.'parts'.DS.$fichier.'.php');
