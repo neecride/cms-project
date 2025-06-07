@@ -2,21 +2,18 @@
 
 namespace Action;
 
-use App;
-use Framework;
-
 class ForumAction{
 
-	private $app;
-	private $cnx;
-	private $router;
-	private $offset;
+	private mixed $app;
+	private mixed $cnx;
+	private mixed $router;
+	private mixed $offset;
 
-	public function __construct($offset = null)
+	public function __construct(mixed $cnx, mixed $app ,mixed $router, $offset = null)
 	{
-		$this->app 			= new App\App;
-		$this->cnx 			= new App\Database;
-		$this->router 		= new Framework\Router;
+		$this->app 			= $app;
+		$this->cnx 			= $cnx;
+		$this->router 		= $router;
 		$this->offset 		= $offset;
 	}
 
@@ -34,9 +31,9 @@ class ForumAction{
 	/**
 	 * getForumDataForAuthenticatedUser si connecté
 	 *
-	 * @return void
+	 * @return array
 	 */
-	private function getForumDataForAuthenticatedUser()
+	private function getForumDataForAuthenticatedUser() : array
 	{
 		$userid = (int)$_SESSION['auth']->id;
 		$sql = "SELECT
@@ -85,7 +82,8 @@ class ForumAction{
 				LEFT JOIN users ON users.id = f_topics.f_user_id
 				LEFT JOIN f_topic_track ON f_topic_track.topic_id = f_topics.id AND f_topic_track.user_id = ?
 				GROUP BY f_topics.id
-				ORDER BY sticky DESC, Lastdate DESC LIMIT {$this->Offset()}";
+				ORDER BY sticky DESC, Lastdate DESC 
+				LIMIT {$this->Offset()}";
 
 		return $this->cnx->Request($sql, [$userid]);
 	}
@@ -94,9 +92,9 @@ class ForumAction{
 	/**
 	 * getForumDataForGuest si non connecté
 	 *
-	 * @return void
+	 * @return array
 	 */
-	private function getForumDataForGuest()
+	private function getForumDataForGuest() : array
 	{
 		$sql = "SELECT
 					/* Vos colonnes sélectionnées */
@@ -151,9 +149,9 @@ class ForumAction{
 	/**
 	 * homePageForum 
 	 *
-	 * @return void
+	 * @return array
 	 */
-	public function homePageForum()
+	public function homePageForum() : array
 	{
 		if (isset($_SESSION['auth'])) {
 			return $this->getForumDataForAuthenticatedUser();
