@@ -2,32 +2,58 @@
 
 namespace App;
 
-Class Pagination{
+/**
+ * Class Pagination
+ * Gère la pagination SQL et HTML pour les listes (forums, réponses, etc.).
+ */
+class Pagination
+{
+    /** @var \PDO */
+    private $cnx;
 
-	private $cnx;
-	private $statement;
-	private $attr;
-	private $perpage;
-	private $count;
-	private $router;
-	private $flash;
+    /** @var string */
+    private $statement;
 
-	public function __construct(
-		$cnx,
-		mixed $router,
-		string $statement, 
-		?int $attr = null,
-		?int $perpage = 10,
-		mixed $flash = null
-	)
-	{
-		$this->cnx 			= $cnx;
-		$this->statement 	= $statement;
-		$this->attr 		= $attr;
-		$this->perpage 		= $perpage;
-		$this->router 		= $router;
-		$this->flash 		= $flash;
-	}
+    /** @var mixed|null */
+    private $attr;
+
+    /** @var int */
+    private $perpage;
+
+    /** @var mixed */
+    private $count;
+
+    /** @var mixed */
+    private $router;
+
+    /** @var mixed */
+    private $flash;
+
+    /**
+     * Pagination constructor.
+     *
+     * @param \PDO       $cnx       Connexion PDO
+     * @param mixed      $router    Router pour générer des routes
+     * @param string     $statement Nom de la requête SQL
+     * @param int|null   $attr      Paramètre de filtre éventuel
+     * @param int|null   $perpage   Résultats par page
+     * @param mixed|null $flash     Service de flash message
+     */
+    public function __construct(
+        $cnx,
+        mixed $router,
+        string $statement,
+        ?int $attr = null,
+        ?int $perpage = 10,
+        mixed $flash = null
+    ) {
+        $this->cnx = $cnx;
+        $this->statement = $statement;
+        $this->attr = $attr;
+        $this->perpage = $perpage;
+        $this->router = $router;
+        $this->flash = $flash;
+    }
 	
 	/**
 	 * Perpage
@@ -102,7 +128,7 @@ Class Pagination{
 	 *
 	 * @return void
 	 */
-	public function isExistPage()
+	public function isExistPage(): void
 	{
 		$match = $this->router->matchRoute();
 		if($this->CurrentPage() > $this->PageTotal() && $this->CurrentPage() > 1) {
@@ -117,7 +143,9 @@ Class Pagination{
 		}
 	}
 
-
+    /**
+     * Retourne la page courante (GET ?page=...).
+     */
 	public function CurrentPage(): int
 	{
 		return $this->getPositiveInt('page', 1);
@@ -136,13 +164,8 @@ Class Pagination{
 
 	/**
 	 * userLinkPage retourn un lien qui redirige vers la dernière réponse
-	 *
-	 * @param  mixed $id
-	 * @param  mixed $idrep
-	 * @param  mixed $countid
-	 * @return void
 	 */
-	public function userLinkPage(string $id,int $idrep,int $countid)
+	public function userLinkPage(int $id,int $idrep,int $countid): string
 	{
 		$t = (int) ceil($countid/$this->perpage);
 		if($this->perpage >= 1){
@@ -155,27 +178,26 @@ Class Pagination{
 		return $userLinkPage;
 	}
 	
-	/**
-	 * offset
-	 *
-	 * @return int
-	 */
+    /**
+     * Calcule l'offset SQL.
+     */
 	private function offset(): int 
 	{
 		return $this->perpage * ($this->CurrentPage() - 1);
 	}
 		
-	/**
-	 * setOffset
-	 *
-	 * @return void
-	 */
-	public function setOffset()
+    /**
+     * Retourne la clause SQL OFFSET LIMIT.
+     */
+	public function setOffset(): string
 	{
 		return ' '. intval($this->perpage) .' OFFSET '. intval($this->offset());
 	}
 
-	public function Prev($url) 
+    /**
+     * Génère le bouton "Page précédente" pour une pagination classique.
+     */
+	public function Prev(string $url): ?string
 	{
 		$match = $this->router->matchRoute();
 		if($this->PageTotal() >= 2):
@@ -192,7 +214,10 @@ Class Pagination{
 		endif;
 	}
 
-	public function Next($url) 
+    /**
+     * Génère le bouton "Page suivante" pour une pagination classique.
+     */
+	public function Next(string $url): ?string
 	{
 		$match = $this->router->matchRoute();
 		if($this->PageTotal() >= 2):
@@ -207,67 +232,101 @@ Class Pagination{
 		endif;
 	}
 
-	/*
-	* génère un lien qui pointe vers la bonne page
-	* javascript si les liens généré sont superieur a 10 alors faire une fonction pour slider les nombres avec les flèche
-	*/
-	public function tinyLinkPage(int $id,int $countid)
+    /**
+     * Génère une mini-pagination en carrousel (tinyPagination).
+     * Affiche un nombre fixe de pages visibles avec des flèches pour défiler.
+     */
+	public function tinyPagination(int $id, int $countid)
 	{
-		$t = (int) ceil($countid/$this->perpage);
-		if($t > 1){
+		$t = (int) ceil($countid / $this->perpage);
+		if ($t > 1) {
 			echo '<div class="uri">';
-				echo '<span id="urileft"><i class="fas fa-caret-left"></i></span>';
-					for($i=1; $i <= $t; $i++)
-					{
-						if($i == 1){
-							echo "<a class=\"item\" href=".$this->router->routeGenerate('viewtopic', ['id' => $id]).">$i</a>";
-						}elseif($i >= 2){
-							echo "<a class=\"item\" href=".$this->router->routeGenerate('viewtopic', ['id' => $id]).'?page='.$i.">$i</a>";
-						}
-					}
-				echo '<span id="uriright"><i class="fas fa-caret-right"></i></span>';
+			echo '  <span class="urileft"><i class="fas fa-caret-left"></i></span>';
+			echo '  <div class="item-container">'; // Conteneur pour les items défilants
+
+			for ($i = 1; $i <= $t; $i++) {
+				$href = $i === 1
+					? $this->router->routeGenerate('viewtopic', ['id' => $id])
+					: $this->router->routeGenerate('viewtopic', ['id' => $id]) . '?page=' . $i;
+
+				echo "<a class=\"item\" href=\"$href\">$i</a>";
+			}
+
+			echo '  </div>'; // fin .item-container
+			echo '  <span class="uriright"><i class="fas fa-caret-right"></i></span>';
 			echo '</div>';
 		}
 	}
 
-	/*
-	* return pagination numbers
-	*/
-	public function pageFor()
+	/**
+     * Génère la pagination complète avec liens + "..."
+     */
+	public function pageFor(): string
 	{
 		$match = $this->router->matchRoute();
-		if($this->PageTotal() >= 2):
-			if(isset($match['name']) && $match['name'] == 'forum-tags'){
-				$url = $this->router->routeGenerate($match['name'], ['slug' => $match['params']['slug'], 'id' => $match['params']['id']]);
-			}elseif(isset($match['name']) && $match['name'] == 'viewtopic'){
-				$url = $this->router->routeGenerate($match['name'], ['id' => $match['params']['id']]);
-			}elseif(isset($match['name']) && in_array($match['name'], ['forum'])){
-				$url = $this->router->routeGenerate($match['name']);
-			}
-			$nb=2;
-			echo $this->prev($url);
-			for($i=1; $i <= $this->PageTotal(); $i++){
-				if($i <= $nb || $i > $this->PageTotal() - $nb ||  ($i > $this->CurrentPage()-$nb && $i < $this->CurrentPage()+$nb)){
-					if($i == $this->CurrentPage()) {
-						echo '<li class="page-item active"><a class="page-link">'. $i .'</a></li>';
-					} elseif($i == 1) {
-						echo '<li class="page-item"><a class="page-link" href='.$url.'>'. $i .'</a></li>' ;
-					}else{
-						echo '<li class="page-item"><a class="page-link" href='.$url.'?page='.$i.'>'. $i .'</a></li>' ;
-					}
-				}else{
-					if($i > $nb && $i < $this->CurrentPage()-$nb){
-						$i = $this->CurrentPage() - $nb;
-					}elseif($i >= $this->CurrentPage() + $nb && $i < $this->PageTotal()-$nb){
-						$i = $this->PageTotal() - $nb;
-					}
-					$ii = ($i-1);
-					echo "<li class='page-item'><a class='page-link' href='$url'?page='$ii'>...</a></li>";
-				}
-			}
-			echo $this->next($url);
-		endif;
-	}
 
+		if ($this->PageTotal() < 2) {
+			return '';
+		}
+
+		// Détermine l'URL de base en fonction de la route
+		$routeName = $match['name'] ?? null;
+		$params = $match['params'] ?? [];
+
+		switch ($routeName) {
+			case 'forum-tags':
+				$url = $this->router->routeGenerate($routeName, [
+					'slug' => $params['slug'],
+					'id' => $params['id']
+				]);
+				break;
+
+			case 'viewtopic':
+				$url = $this->router->routeGenerate($routeName, [
+					'id' => $params['id']
+				]);
+				break;
+
+			case 'forum':
+			default:
+				$url = $this->router->routeGenerate($routeName);
+				break;
+		}
+
+		$currentPage = $this->CurrentPage();
+		$totalPages = $this->PageTotal();
+		$visiblePages = 2;
+
+		$output = $this->prev($url);
+
+		for ($i = 1; $i <= $totalPages; $i++) {
+			$isNearCurrent = abs($i - $currentPage) < $visiblePages;
+			$isAtStartOrEnd = $i <= $visiblePages || $i > $totalPages - $visiblePages;
+
+			if ($isAtStartOrEnd || $isNearCurrent) {
+				if ($i === $currentPage) {
+					$output .= "<li class='page-item active'><a class='page-link'>{$i}</a></li>";
+				} else {
+					$href = ($i === 1) ? $url : "{$url}?page={$i}";
+					$output .= "<li class='page-item'><a class='page-link' href='{$href}'>{$i}</a></li>";
+				}
+			} else {
+				// Évite l'affichage de plusieurs "..."
+				if ($i < $currentPage - $visiblePages) {
+					$i = $currentPage - $visiblePages;
+				} elseif ($i > $currentPage + $visiblePages && $i < $totalPages - $visiblePages) {
+					$i = $totalPages - $visiblePages;
+				}
+
+				$ellipsisPage = $i - 1;
+				$ellipsisHref = "{$url}?page={$ellipsisPage}";
+				$output .= "<li class='page-item'><a class='page-link' href='{$ellipsisHref}'>...</a></li>";
+			}
+		}
+
+		$output .= $this->next($url);
+		
+		return $output;
+	}
 
 }
