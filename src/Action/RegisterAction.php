@@ -7,29 +7,20 @@ use Framework;
 
 Class RegisterAction{
 
-	public  $errors;
 	private $app;
 	private $cnx;
 	private $validator;
 	private $router;
 	private $session;
 
-	public function __construct()
+	public function __construct(mixed $cnx, mixed $app, mixed $router, mixed $session, mixed $validator = null)
 	{
-		$this->app 			= new App\App;
-		$this->cnx 			= new App\Database;
-		$this->router 		= new Framework\Router;
-		$this->session 		= new App\Session;
-		$this->validator 	= new App\Validator;
+		$this->cnx 			= $cnx;
+		$this->app 			= $app;
+		$this->router 		= $router;
+		$this->session 		= $session;
+		$this->validator 	= $validator;
  	}
-	
-	public function checkError()
-	{
-		if(!is_null($this->errors))
-		{
-			return "<div class=\"notify notify-rouge\"><div class=\"notify-box-content\"><li class=\"errmode\">". implode("</li><li class=\"errmode\">",$this->errors) ."</li></div></div>";
-		}
-	}
 
     /**
      * register permet d'incrire un utilisateur
@@ -82,7 +73,7 @@ Class RegisterAction{
                 $this->app->setFlash('Vous êtes bien inscrit reste a valider votre compte ! par Email');
                 $this->app->redirect($this->router->routeGenerate('home'));
             }
-            $this->errors = $this->validator->getErrors();
+            $this->validator->getErrors();
         }
         return $this;
     }
