@@ -9,22 +9,27 @@ use App\Renderer;
 
 class AccountController extends Renderer
 {
-
     public function account()
     {
-        $perpage = $this->Params()->GetParam(2);
-        $this->app()->isNotConnect();
-        $forum = new ForumAction;
-        $account = new AccountAction;
+        $this->thisApp()->isNotConnect();
+        $forum = new ForumAction($this->thisPDO(), $this->thisApp(), $this->thisRoute());
         $pagination = new Pagination(
-            $this->ThisRoute(),
+            $this->thisPDO(),
+            $this->thisRoute(),
             'SELECT COUNT(id) FROM f_topics WHERE f_user_id = ?', 
             $_SESSION['auth']->id,
-            $perpage,
-            $this->app()
+            $this->thisParams()->GetParam(2),
+            $this->thisApp()
         );
-        $user = (new AccountAction)->desactivAccount()->editEmail()->postAvatar()->delAvatar()->postDescription()->editMdp();
-        $this->render('account', compact('user','account','forum','pagination'));
+        $errMode = $this->thisValidator();
+        $user = (new AccountAction($this->thisPDO(),$this->thisApp(),$this->thisRoute(),$this->thisSession(),$errMode))
+                ->desactivAccount()
+                ->editEmail()
+                ->postAvatar()
+                ->delAvatar()
+                ->postDescription()
+                ->editMdp();
+        $this->render('account', compact('user','forum','pagination','errMode'));
     }
 
 }
