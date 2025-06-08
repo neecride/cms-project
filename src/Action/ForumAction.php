@@ -27,13 +27,12 @@ class ForumAction{
 		return	$this->offset;
 	}
 
-
 	/**
 	 * getForumDataForAuthenticatedUser si connecté
 	 *
-	 * @return array
+	 * @return void
 	 */
-	private function getForumDataForAuthenticatedUser() : array
+	private function getForumDataForAuthenticatedUser()
 	{
 		$userid = (int)$_SESSION['auth']->id;
 		$sql = "SELECT
@@ -60,30 +59,15 @@ class ForumAction{
 							CASE - si on a un nouveau topic on le met au dessu
 							et si on a une réponse on passe au dessu du dernier topic
 							*/
-							CASE
-
-								WHEN f_topic_date < f_topic_message_date THEN f_topic_message_date
-
-								WHEN f_topic_date > f_topic_message_date THEN f_topic_date
-
-								ELSE f_topic_date
-
-							END AS Lastdate,
+							GREATEST(f_topic_date, COALESCE(f_topic_message_date, f_topic_date)) AS Lastdate,
 							/* view not view */
-							CASE
-
-								WHEN read_topic < f_topic_date THEN f_topic_date
-
-								WHEN read_topic > f_topic_date THEN read_topic
-
-							END AS read_last
+							GREATEST(COALESCE(read_topic, f_topic_date), f_topic_date) AS read_last
 				FROM f_topics
 				/* Vos jointures */
 				LEFT JOIN users ON users.id = f_topics.f_user_id
 				LEFT JOIN f_topic_track ON f_topic_track.topic_id = f_topics.id AND f_topic_track.user_id = ?
 				GROUP BY f_topics.id
-				ORDER BY sticky DESC, Lastdate DESC 
-				LIMIT {$this->Offset()}";
+				ORDER BY sticky DESC, Lastdate DESC LIMIT {$this->Offset()}";
 
 		return $this->cnx->Request($sql, [$userid]);
 	}
@@ -92,9 +76,9 @@ class ForumAction{
 	/**
 	 * getForumDataForGuest si non connecté
 	 *
-	 * @return array
+	 * @return void
 	 */
-	private function getForumDataForGuest() : array
+	private function getForumDataForGuest()
 	{
 		$sql = "SELECT
 					/* Vos colonnes sélectionnées */
@@ -119,23 +103,9 @@ class ForumAction{
 								CASE - si on a un nouveau topic on le met au dessu
 								et si on a une réponse au passe au dessu du dernier topic
 								*/
-								CASE
-
-								WHEN f_topic_date < f_topic_message_date THEN f_topic_message_date
-
-								WHEN f_topic_date > f_topic_message_date THEN f_topic_date
-
-								ELSE f_topic_date
-
-								END AS Lastdate,
+								GREATEST(f_topic_date, COALESCE(f_topic_message_date, f_topic_date)) AS Lastdate,
 								/* view not view */
-								CASE
-
-								WHEN read_topic < f_topic_date THEN f_topic_date
-
-								WHEN read_topic > f_topic_date THEN read_topic
-
-								END AS read_last
+								GREATEST(COALESCE(read_topic, f_topic_date), f_topic_date) AS read_last
 				FROM f_topics
 				/* Vos jointures */
 				LEFT JOIN users ON users.id = f_topics.f_user_id
@@ -149,9 +119,9 @@ class ForumAction{
 	/**
 	 * homePageForum 
 	 *
-	 * @return array
+	 * @return void
 	 */
-	public function homePageForum() : array
+	public function homePageForum()
 	{
 		if (isset($_SESSION['auth'])) {
 			return $this->getForumDataForAuthenticatedUser();
@@ -159,6 +129,7 @@ class ForumAction{
 			return $this->getForumDataForGuest();
 		}
 	}
+
 	
 	/**
 	 * viewLastReponse la dernière réponse a un topic 
@@ -303,25 +274,11 @@ class ForumAction{
 					CASE - si on a un nouveau topic on le met au dessu
 					et si on a une réponse on passe au dessu du dernier topic
 					*/
-					CASE
-
-					WHEN f_topic_date < f_topic_message_date THEN f_topic_message_date
-
-					WHEN f_topic_date > f_topic_message_date THEN f_topic_date
-
-					ELSE f_topic_date
-
-					END AS Lastdate,
+					GREATEST(f_topic_date, f_topic_message_date) AS Lastdate,
 					/*
 					view not view
 					*/
-					CASE
-
-					WHEN read_topic < f_topic_date THEN f_topic_date
-
-					WHEN read_topic > f_topic_date THEN read_topic
-
-					END AS read_last
+					GREATEST(COALESCE(read_topic, f_topic_date), f_topic_date) AS read_last
 
 			FROM f_topics
 
@@ -370,23 +327,9 @@ class ForumAction{
 					CASE - si on a un nouveau topic on le met au dessu
 					et si on a une réponse au passe au dessu du dernier topic
 					*/
-					CASE
-
-						WHEN f_topic_date < f_topic_message_date THEN f_topic_message_date
-
-						WHEN f_topic_date > f_topic_message_date THEN f_topic_date
-
-						ELSE f_topic_date
-
-					END AS Lastdate,
+					GREATEST(f_topic_date, f_topic_message_date) AS Lastdate,
 					/* view not view */
-					CASE
-
-					WHEN read_topic < f_topic_date THEN f_topic_date
-
-					WHEN read_topic > f_topic_date THEN read_topic
-
-					END AS read_last
+					GREATEST(COALESCE(read_topic, f_topic_date), f_topic_date) AS read_last
 
 				FROM f_topics
 
@@ -420,30 +363,26 @@ class ForumAction{
 
 	public function homePage(int $limit=6)
 	{
-
 		return $this->cnx->Request("SELECT
-
 			f_topics.id AS topicid,
 			f_topics.f_topic_name,
 			f_topics.f_topic_content,
 			f_topics.f_topic_date,
-				users.id AS usersid,
-				users.username,
-				users.avatar,
-				users.email,
-				users.slug AS userslug,
-				users.date_inscription,
-				users.description
-
+			users.id AS usersid,
+			users.username,
+			users.avatar,
+			users.email,
+			users.slug AS userslug,
+			users.date_inscription,
+			users.description
 			FROM f_topics
-
 			LEFT JOIN users ON users.id = f_topics.f_user_id
-
 			WHERE sticky = 1
-
 			GROUP BY f_topics.id
-
-			ORDER BY f_topics.f_topic_date DESC LIMIT $limit");
+			ORDER BY 
+				CASE WHEN users.slug = 'admin' THEN 0 ELSE 1 END,
+				f_topics.f_topic_date DESC 
+			LIMIT $limit");
 	}
 
 	/**
