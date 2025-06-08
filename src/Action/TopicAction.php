@@ -316,7 +316,7 @@ Class TopicAction{
      * @param  int $PageTotal
      * @return self
      */
-    public function postResponses(int $PageTotal, int $MaxPage):self
+    public function postResponses(int $MaxPage):self
 	{
 		if(isset($_POST['topics'])){
 			$this->app->isNotConnect('forum');
