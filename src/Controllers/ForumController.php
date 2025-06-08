@@ -13,8 +13,20 @@ class ForumController extends Renderer
 
     public function home()
     {
+        $pagination = new Pagination(
+            $this->thisPDO(),
+            $this->thisRoute(),
+            'SELECT COUNT(f_tags.id) 
+                FROM f_topics LEFT JOIN f_topic_tags 
+                ON f_topics.id = f_topic_tags.topic_id 
+                LEFT JOIN f_tags ON f_topic_tags.tag_id = f_tags.id
+                WHERE f_tags.id = ?',
+            null,
+            $this->thisParams()->GetParam(2),
+            $this->thisApp()
+        );
         $home = new ForumAction($this->thisPDO(),$this->thisApp(),$this->thisRoute());
-        $this->render('home', compact('home'));
+        $this->render('home', compact('home','pagination'));
     }
 
     public function forum()
@@ -44,9 +56,10 @@ class ForumController extends Renderer
             $this->thisParams()->GetParam(2),
             $this->thisApp()
         );
+        $MaxPage = (int) $this->thisParams()->GetParam(2);
         $forum      = new ForumAction($this->thisPDO(),$this->thisApp(),$this->thisRoute());
         $Response   = (new TopicAction($this->thisPDO(),$this->thisApp(),$this->thisRoute(),$this->thisSession(),$errMode,$pagination->setOffset()))
-                ->postResponses($pagination->PageTotal())
+                ->postResponses($MaxPage)
                 ->viewNotView()
                 ->resolved()
                 ->sticky()
