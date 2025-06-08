@@ -313,10 +313,10 @@ Class TopicAction{
     /**
      * postResponses post une nouvelle réponse et met a jour les dates topic et topic track 
      *
-     * @param  int $page
+     * @param  int $PageTotal
      * @return self
      */
-    public function postResponses(int $page):self
+    public function postResponses(int $PageTotal, int $MaxPage):self
 	{
 		if(isset($_POST['topics'])){
 			$this->app->isNotConnect('forum');
@@ -335,12 +335,14 @@ Class TopicAction{
 				$this->cnx->Request("UPDATE f_topics SET f_topic_message_date = NOW() WHERE id = ?",[$id]);
 				//on update topic track en fonction de l'utilisateur
 				sleep(1);
+            	// Récupération du count correctement
+				$countResult = $this->cnx->CountObj("SELECT COUNT(id) AS countid FROM f_topics_reponse WHERE f_topic_id = ?",[$id]);
+				$count = (int) $countResult->countid; // Conversion en entier
+				$redirect = ceil($count/$MaxPage);
 				//tester une redirection vers la page en court et redirigé dessus si une nouvelle page se créer
 				$this->app->setFlash('Votre réponse a bien été poster');
-				if($page > 1){
-					$this->app->redirect($this->router->routeGenerate('viewtopic',['id' => $match['params']['id'] .'?page='.$page.'#rep-' . $lastid]));
-				}
-				$this->app->redirect($this->router->routeGenerate('viewtopic',['id' => $match['params']['id'] .'#rep-' . $lastid]));
+				// on redirige si page total augmente de 1
+				$this->app->redirect($this->router->routeGenerate('viewtopic',['id' => $match['params']['id'] .'?page='.$redirect.'#rep-' . $lastid]));
 			}
 			$this->validator->getErrors();
 		}
