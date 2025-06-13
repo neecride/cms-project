@@ -4,73 +4,128 @@ namespace Framework;
 
 use AltoRouter;
 
-class Router {
-
-    private function Route()
-    {
-      //               action  >  route >  file >  get name
-      //$router->map('GET|POST', '/home', 'home','home');
-      $router = new AltoRouter();
-
-      $router->map('GET|POST', '/', 'home');
-      $router->map('GET|POST', '/home', 'home','home');
-      $router->map('GET|POST', '/logout', 'logout','logout');
-      $router->map('GET'     , '/error', 'error','error');
-      $router->map('GET|POST', '/remember', 'remember','remember');
-      $router->map('GET|POST', '/reset-[*:username]-[*:token]', 'reset','reset');
-      $router->map('GET|POST', '/register', 'register','register');
-      $router->map('GET|POST', '/confirm-[*:username]-[*:token]', 'confirm','confirm');
-      $router->map('GET|POST', '/login', 'login','login');
-
-      //user account
-      $router->map('GET|POST', '/account', 'account','account');
-
-      //forum
-      $router->map('GET'     , '/forum', 'forum', 'forum');
-      $router->map('GET'     , '/forum-viewforum-[*:slug]-[i:id]', 'viewforums','forum-tags');
-      $router->map('GET|POST', '/forum-topic-[i:id]', 'viewtopic','viewtopic');
-      $router->map('GET|POST', '/sticky-[i:id]-[i:sticky]-[*:getcsrf]', 'viewtopic','sticky');
-      $router->map('GET|POST', '/lock-[i:id]-[i:lock]-[*:getcsrf]', 'viewtopic','lock');
-      $router->map('GET|POST', '/unlock-[i:id]-[i:lock]-[*:getcsrf]', 'viewtopic','unlock');
-      $router->map('GET|POST', '/creattopic', 'creattopic','creattopic');
-      $router->map('GET|POST', '/edittopic-[i:id]', 'edittopic','edittopic');
-      $router->map('GET|POST', '/editrep-[i:id]', 'editrep','editrep');
-
-      //administration
-      $router->map('GET|POST', '/admin/dashboard', 'admin','admin');
-      $router->map('GET'     , '/admin/user', 'user','user');
-      $router->map('GET|POST', '/admin/user-edit-[i:id]-[*:getcsrf]', 'useredit','user-edit');
-      $router->map('GET|POST', '/admin/user-delete-[i:del]-[i:rank]-[*:getcsrf]', 'user','user-delete');
-      $router->map('GET|POST', '/admin/user-active-[i:activ]-[i:rank]-[*:getcsrf]', 'user','user-active');
-      $router->map('GET|POST', '/admin/user-desactive-[i:unactiv]-[i:rank]-[*:getcsrf]', 'user','user-desactive');
-      $router->map('GET'     , '/admin/tags', 'tags','tags');
-      $router->map('GET|POST', '/admin/tags-add', 'tagsedit','tags-add');
-      $router->map('GET|POST', '/admin/tags-edit-[*:editid]-[*:getcsrf]', 'tagsedit','tags-edit');
-      $router->map('GET|POST', '/admin/widget-alert', 'widgetalert','widget-alert');
-
-      return $router;
-    }
-    
+class Router
+{
     /**
-     * routeGenerate génére les liens
+     * @var AltoRouter
+     */
+    private AltoRouter $router;
+
+    public function __construct()
+    {
+        $this->router = new AltoRouter();
+        $this->registerRoutes();
+    }
+
+    /**
+     * Enregistre toutes les routes de l'application.
      *
-     * @param  mixed $page
-     * @param  mixed $params
      * @return void
      */
-    public function routeGenerate(string $page , ?array $params = [])
+    private function registerRoutes(): void
     {
-      return $this->Route()->generate($page, $params);
+        $routes = require RACINE . DS . 'config' . DS . 'routes.php';
+        foreach ($routes as $route) {
+            [$method, $url, $target, $name] = array_pad($route, 4, null);
+            $this->router->map($method, $url, $target, $name);
+        }
     }
-    
+
     /**
-     * matchRoute match les diférente route
+     * Redirige vers l'URL canonique si le paramètre `page=1` est présent dans l'URL.
+     * Évite les contenus dupliqués pour le SEO.
      *
      * @return void
+     */
+    public function redirectIfFirstPage(): void
+    {
+      $page = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT);
+
+      if ($page === 1) {
+          $uri = explode('?', $_SERVER['REQUEST_URI'])[0];
+          $query = http_build_query(array_filter($_GET, fn($key) => $key !== 'page', ARRAY_FILTER_USE_KEY));
+          $uri .= (!empty($query)) ? '?' . $query : '';
+          header('Location: ' . $uri, true, 301);
+          exit();
+      }
+    }
+
+    /**
+     * Gère la route correspondante ou affiche une page d'erreur.
+     * @param object $app    Application principale (pour flash, redirection)
+     *
+     * @return void
+     */
+    public function handleRouting($app): void
+    {
+        if (is_array($this->matchRoute())) {
+            try {
+                $this->handleRoute($this->matchRoute(), $app);
+            } catch (\Exception $e) {
+                error_log("Erreur route : " . $e->getMessage());
+                http_response_code(500);
+                $app->redirect($this->routeGenerate('error'));
+            }
+        } else {
+            http_response_code(404);
+            try {
+                $app->redirect($this->routeGenerate('error'));
+            } catch (\Exception $e) {
+                require_once RACINE . DS . 'public' . DS . 'templates' . DS . 'error.php';
+            }
+            exit();
+        }
+    }
+
+    /**
+     * Exécute la méthode correspondant à la route trouvée.
+     * @param object $app   Instance de l'application
+     *
+     * @return void
+     */
+    public function handleRoute($app): void
+    {
+        $method = strtolower($this->matchRoute()['target']);
+
+        if (method_exists($this, $method)) {
+            $this->$method();
+        } else {
+            $app->setFlash("Une erreur est survenue", 'orange');
+            http_response_code(404);
+            $app->redirect($this->routeGenerate('error'));
+        }
+    }
+
+    /**
+     * Génère une URL à partir d’un nom de route et de ses paramètres.
+     *
+     * @param string $name   Nom de la route
+     * @param array|null $params Paramètres optionnels
+     * @return string
+     */
+    public function routeGenerate(string $name, ?array $params = []): string
+    {
+        return $this->router->generate($name, $params ?? []);
+    }
+
+    /**
+     * Tente de faire correspondre la requête HTTP actuelle à une route définie.
+     *
+     * @return mixed
      */
     public function matchRoute()
     {
-      return $this->Route()->match();
+        return $this->router->match();
+    }
+
+    /**
+     * Retourne l’instance interne d’AltoRouter (utile si besoin avancé).
+     *
+     * @return AltoRouter
+     */
+    public function getRouter(): AltoRouter
+    {
+        return $this->router;
     }
 
     /**
@@ -89,31 +144,19 @@ class Router {
         }else{
             $absolute = $url[0] . $directory . DIRECTORY_SEPARATOR;
         }
-        return $absolute;
-    }
 
-    public function handleRoute(array $match, $router, $app): void {
-        $method = strtolower($match['target']);
-    
-        if (method_exists($router, $method)) {
-            $router->$method();
-        } else {
-            $app->setFlash("Une erreur est survenue", 'orange');
-            http_response_code(404);
-            $app->redirect($router->routeGenerate('error'));
-        }
+        return $absolute;
     }
 
 
     /*
     * target === file name
     */
-
     public function home()
     {
         if($this->matchRoute()['target'] === 'home')
         {
-          return (new \Controllers\ForumController)->home();
+          return (new \Controllers\HomeController())->home();
         }
     }
 
@@ -129,7 +172,7 @@ class Router {
     {
         if($this->matchRoute()['target'] === 'viewforums')
         {
-          return (new \Controllers\ForumController)->viewforum($this->matchRoute()['params']['id']);
+          return (new \Controllers\ViewforumController)->viewforum($this->matchRoute()['params']['id']);
         }
     }
 
@@ -137,7 +180,7 @@ class Router {
     {
         if($this->matchRoute()['target'] === 'viewtopic')
         {
-          return (new \Controllers\ForumController)->viewtopic($this->matchRoute()['params']['id']);
+          return (new \Controllers\ViewtopicController)->viewtopic($this->matchRoute()['params']['id']);
         }
     }
 
@@ -145,7 +188,7 @@ class Router {
     {
         if($this->matchRoute()['target'] === 'creattopic')
         {
-          return (new \Controllers\ForumController)->creatTopic();
+          return (new \Controllers\CreattopicController)->creatTopic();
         }
     }
 
@@ -153,7 +196,7 @@ class Router {
     {
         if($this->matchRoute()['target'] === 'editrep')
         {
-          return (new \Controllers\ForumController)->editRep();
+          return (new \Controllers\EditreponseController)->editRep();
         }
     }
 
@@ -161,7 +204,7 @@ class Router {
     {
         if($this->matchRoute()['target'] === 'edittopic')
         {
-          return (new \Controllers\ForumController)->editTopic();
+          return (new \Controllers\EdittopicController)->editTopic();
         }
     }
 
@@ -225,7 +268,7 @@ class Router {
     {
         if($this->matchRoute()['target'] === 'error')
         {
-          return (new \Controllers\SiteController)->error();
+          return (new \Controllers\BaseController)->error();
         }
     }
 
@@ -233,7 +276,7 @@ class Router {
     {
         if($this->matchRoute()['target'] === 'logout')
         {
-          return (new \Controllers\SiteController)->logout();
+          return (new \Controllers\BaseController)->logout();
         }
     }
 
@@ -241,7 +284,7 @@ class Router {
     {
         if($this->matchRoute()['target'] === 'login')
         {
-          return (new \Controllers\SiteController)->login();
+          return (new \Controllers\BaseController)->login();
         }
     }
 
@@ -276,7 +319,5 @@ class Router {
           return (new \Controllers\RegisterController)->reset();
         }
     }
-
-
 
 }
