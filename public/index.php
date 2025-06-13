@@ -21,7 +21,7 @@ $builder->addDefinitions(RACINE.DS.'config'.DS.'di.php');
 $container = $builder->build();
 
 $app              = new App\App;
-$router           = new Framework\Router($container);
+$router           = new Framework\Router;
 
 // Reconnexion utilisateur depuis le cookie
 $app->reconnectFromCookie();
